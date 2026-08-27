@@ -215,7 +215,15 @@ class Protocol extends Protocol_ {
 			console.log( "saved document", msg.name, msg.snapshot.length, "bytes" );
 		} );
 
-		this.on( "connect", ( ws ) => {
+		/*
+		 * 'connect' is the one event handed the raw socket first: it fires with
+		 * (rawWs, WS).  Every other event -- op handlers and 'close' -- is given
+		 * the WS wrapper.  Key off the wrapper, or nothing matches: 'close'
+		 * would never remove the entry, sessions.get() in the op handlers would
+		 * always miss (silently falling back to no tokens), and a broadcast
+		 * would hand the raw socket an object, which it cannot encode.
+		 */
+		this.on( "connect", ( rawWs, ws ) => {
 			clients.add( ws );
 			// No authentication yet: an empty token set, which denies any
 			// action or control that declares tokens.
