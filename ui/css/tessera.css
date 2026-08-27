@@ -1,0 +1,224 @@
+/*
+ * Tessera Trellis core styles.
+ *
+ * The page is a 10000x10000 lattice where one unit is 1/100th of a percent,
+ * so a control's rect becomes CSS with no layout query and no track count --
+ * the browser redoes the math on every resize for free.
+ */
+
+:root {
+	--tt-page-bg: #1a1a22;
+	--tt-chrome-bg: #14141a;
+	--tt-chrome-fg: #d8d8e0;
+	--tt-chrome-line: #2e2e3c;
+	--tt-accent: #78beff;
+}
+
+html, body {
+	margin: 0;
+	height: 100%;
+	background: var(--tt-chrome-bg);
+	color: var(--tt-chrome-fg);
+	font: 14px/1.4 system-ui, sans-serif;
+}
+
+/* The stage holds exactly one page plus, in the editor, one overlay. */
+/*
+ * isolation:isolate makes the stage its own stacking context, so the overlay's
+ * z-index:10 is scoped to the stage instead of competing with the rest of the
+ * page.  Without it the overlay outranked popups2's frames (z-index:1) and
+ * painted the grid and selection over an open property panel -- and, worse,
+ * swallowed its clicks, since the canvas takes pointer events while editing.
+ *
+ * Confining it rather than pinning the frames high on purpose: popups2 assigns
+ * frame z-indexes dynamically for raise-on-click, and a fixed override here
+ * would flatten the ordering between several open popups.
+ */
+.tt-stage {
+	position: relative;
+	isolation: isolate;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+.tt-page {
+	position: absolute;
+	inset: 0;
+	background: var(--tt-page-bg);
+}
+
+.tt-control {
+	position: absolute;
+	left:   calc( var(--x) * 0.01% );
+	top:    calc( var(--y) * 0.01% );
+	width:  calc( var(--w) * 0.01% );
+	height: calc( var(--h) * 0.01% );
+	display: flex;
+	box-sizing: border-box;
+}
+
+.tt-control > * {
+	flex: 1 1 auto;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* Controls stop reacting to the pointer while the overlay owns input. */
+.tt-page.tt-editing .tt-control { pointer-events: none; }
+
+/*
+ * The shared layer draws above the page layer so a header bar always wins.
+ * The layer itself is transparent to the pointer; its controls are not.
+ */
+.tt-shared {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+.tt-shared > .tt-control { pointer-events: auto; }
+.tt-page.tt-editing ~ .tt-shared > .tt-control { pointer-events: none; }
+
+.tt-overlay {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	z-index: 10;
+}
+.tt-overlay.tt-active { pointer-events: auto; }
+
+/* -- stock controls ------------------------------------------------------ */
+
+/*
+ * Glare-set button: mask under, text middle, lens over the text.  Each layer
+ * fills the control; the mask carries the feColorMatrix filter.
+ */
+.tt-button {
+	position: relative;
+	border: 0;
+	padding: 0;
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: clamp( 11px, 2.2vh, 22px );
+	cursor: pointer;
+	overflow: hidden;
+	isolation: isolate;
+}
+
+.tt-face-mask,
+.tt-face-lens {
+	position: absolute;
+	inset: 0;
+	background-size: 100% 100%;
+	background-repeat: no-repeat;
+	pointer-events: none;
+	border-radius: 6px;
+}
+
+.tt-face-mask { z-index: 0; }
+
+.tt-face-text {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	padding: 4%;
+}
+
+/* Above the text, so the text picks up the specular and the refraction. */
+.tt-face-lens { z-index: 2; }
+
+/* Brightness goes on the button, never on the mask -- a filter there would
+   replace the feColorMatrix rather than compose with it. */
+.tt-button:hover  { filter: brightness( 1.12 ); }
+.tt-button:active { filter: brightness( .92 ); }
+
+.tt-session .tt-face-text { font-weight: 600; }
+
+.tt-label {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: clamp( 11px, 2.6vh, 28px );
+	overflow: hidden;
+	white-space: pre-wrap;
+}
+
+/* -- data controls ------------------------------------------------------- */
+
+.tt-table-host {
+	overflow: auto;
+	background: rgba(0,0,0,.25);
+	border: 1px solid rgba(255,255,255,.12);
+	border-radius: 4px;
+	font-size: clamp( 9px, 1.6vh, 15px );
+}
+
+.tt-table { width: 100%; border-collapse: collapse; }
+
+.tt-table th {
+	position: sticky;
+	top: 0;
+	text-align: left;
+	padding: 4px 8px;
+	background: #2a2a38;
+	border-bottom: 1px solid rgba(255,255,255,.15);
+	font-weight: 600;
+}
+
+.tt-table td { padding: 3px 8px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tt-table tbody tr:hover { background: rgba(255,255,255,.05); cursor: default; }
+.tt-table tbody tr.tt-row-selected { background: rgba(120,190,255,.22); }
+
+.tt-search { display: flex; flex-direction: column; gap: 5px; }
+.tt-search-box {
+	flex: 0 0 auto;
+	padding: 5px 9px;
+	background: #22222c;
+	color: inherit;
+	border: 1px solid rgba(255,255,255,.15);
+	border-radius: 4px;
+	font: inherit;
+}
+.tt-search-results { flex: 1 1 auto; min-height: 0; }
+
+/* Page background video -- behind every control by DOM order, and never a
+   pointer target: a <video> swallows clicks the way an iframe does. */
+.tt-page-video {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	pointer-events: none;
+}
+
+/* A page embed: an HTML fragment in a shadow root, behind every control.
+   Sized to the page; the fragment styles its own inside. */
+.tt-page-embed {
+	position: absolute;
+	inset: 0;
+	overflow: auto;
+}
+
+/* Design time, where the fragment is deliberately NOT executed. */
+.tt-page-embed-stub {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	padding: 10px;
+	text-align: center;
+	background: rgba( 20, 20, 26, .55 );
+	color: #8f98b8;
+	font: 400 12px/1.4 ui-monospace, Consolas, monospace;
+	overflow-wrap: anywhere;
+	pointer-events: none;
+}

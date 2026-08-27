@@ -1,0 +1,24 @@
+{
+	// PORT in the environment overrides this.
+	port: 8099,
+
+	/*
+	 * Which plugins to load.
+	 *
+	 *   "*"            every plugin found on disk (the default when this file
+	 *                  or this key is absent)
+	 *   [ "a", "b" ]   exactly these, loaded in this order
+	 *
+	 * Order matters: registration order is observable, so a later plugin can
+	 * take an action or source name an earlier one registered.
+	 *
+	 * A plugin may be one-sided -- server-only (server/plugins/<name>.mjs, an
+	 * action provider with no UI) or client-only (ui/plugins/<name>/index.js,
+	 * controls needing no server).  A name matching neither half is reported
+	 * at startup rather than silently ignored.
+	 */
+	plugins: [
+		"iframe",
+		"players",
+	],
+}

@@ -1,0 +1,60 @@
+/*
+ * Web Page control.
+ *
+ * Loaded by the plugin itself rather than added to the editor's stylesheet --
+ * a plugin that needs styling should carry it, or removing the plugin leaves
+ * orphan rules behind.
+ */
+
+.tt-web {
+	position: relative;
+	overflow: hidden;
+	border-radius: 4px;
+}
+
+.tt-web-frame {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	background: transparent;
+}
+
+/* Design-time face: what this is and where it points. */
+.tt-web-scrim {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 5px;
+	padding: 10px;
+	text-align: center;
+	background: rgba( 20, 20, 26, .82 );
+	color: #c8cee6;
+	font: 400 13px/1.35 system-ui, sans-serif;
+	/* The overlay owns input while editing; never compete for it. */
+	pointer-events: none;
+}
+.tt-web-scrim[hidden] { display: none; }
+
+.tt-web-scrim-title { font-weight: 600; color: #9fd0ff; }
+
+.tt-web-scrim-url {
+	max-width: 100%;
+	color: #8f98b8;
+	font-family: ui-monospace, Consolas, monospace;
+	font-size: 11px;
+	overflow-wrap: anywhere;
+}
+
+.tt-web-scrim-note { color: #6c7492; font-size: 11px; }
+
+.tt-web-scrim-warn {
+	max-width: 100%;
+	margin-top: 2px;
+	color: #ffb0b0;
+	font-size: 11px;
+	line-height: 1.3;
+}

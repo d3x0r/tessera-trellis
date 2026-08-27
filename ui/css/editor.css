@@ -1,0 +1,524 @@
+/* Designer chrome. Loaded only by editor.html. */
+
+body.tt-editor {
+	display: flex;
+	flex-direction: column;
+}
+
+.tt-toolbar {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 10px;
+	background: var(--tt-chrome-bg);
+	border-bottom: 1px solid var(--tt-chrome-line);
+	flex: 0 0 auto;
+	font-size: 13px;
+}
+
+.tt-toolbar label { display: flex; align-items: center; gap: 5px; }
+
+.tt-toolbar select,
+.tt-toolbar input,
+.tt-toolbar button {
+	background: #22222c;
+	color: var(--tt-chrome-fg);
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 4px;
+	padding: 3px 7px;
+	font: inherit;
+}
+.tt-toolbar input[type=number] { width: 4em; }
+.tt-toolbar button { cursor: pointer; }
+.tt-toolbar button:hover { border-color: var(--tt-accent); }
+
+.tt-sep  { width: 1px; align-self: stretch; background: var(--tt-chrome-line); }
+.tt-grow { flex: 1 1 auto; }
+
+.tt-status {
+	font-family: ui-monospace, Consolas, monospace;
+	font-size: 12px;
+	color: #9aa0b4;
+	white-space: nowrap;
+}
+
+body.tt-editor .tt-stage { flex: 1 1 auto; }
+
+.tt-wire {
+	flex: 0 0 auto;
+	max-height: 30vh;
+	overflow: auto;
+	margin: 0;
+	padding: 10px;
+	background: #0e0e14;
+	border-top: 1px solid var(--tt-chrome-line);
+	font-family: ui-monospace, Consolas, monospace;
+	font-size: 12px;
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+
+/* -- popups2 theming ----------------------------------------------------- */
+
+/*
+ * popups2 ships styles.css (neutral) and dark-styles.css (its own dark theme);
+ * this is a third, matched to the editor chrome.  The two Popover-API bugs are
+ * NOT handled here -- visibility:hidden with no :popover-open companion, and
+ * the unneutralised UA inset:0/margin:auto -- because both are fixed upstream
+ * in popups2 itself, in both of its stylesheets.
+ */
+
+[class^="popup-menu"] {
+	background-color: var(--tt-chrome-bg);
+	color: var(--tt-chrome-fg);
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 6px;
+	padding: 4px;
+	box-shadow: 0 8px 28px rgba(0,0,0,.6);
+	font-size: 13px;
+	min-width: 150px;
+}
+
+/* Items are styled a[class^="popup-item"] upstream, so match that specificity. */
+[class^="popup-menu"] a[class^="popup-item"],
+[class^="popup-menu"] a[class^="popup-item-menu"] {
+	display: block;
+	background: transparent;
+	color: var(--tt-chrome-fg);
+	border: 0;
+	padding: 4px 12px;
+	border-radius: 4px;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+}
+[class^="popup-menu"] a[class^="popup-item"]:hover,
+[class^="popup-menu"] a[class^="popup-item-menu"]:hover {
+	background: #2f3a4d;
+	color: var(--tt-chrome-fg);
+	text-decoration: none;
+}
+/* A submenu row deserves to look like one. */
+[class^="popup-menu"] a[class^="popup-item-menu"]::after {
+	content: "▸";
+	float: right;
+	opacity: .6;
+	margin-left: 14px;
+}
+[class^="popup-menu"] hr {
+	border: 0;
+	border-top: 1px solid var(--tt-chrome-line);
+	margin: 4px 2px;
+}
+
+/* The frame: styles.css leaves it translucent light grey with an aquamarine
+   caption, which over a live canvas is unreadable.
+   
+   PREFIX selectors, not exact class names. A `suffix` opt renames the element's
+   class -- SimpleNotice forces "-notice", so its frame is `frameContainer-notice`
+   and an exact `.frameContainer` rule silently misses it. That is why notices
+   kept rendering aquamarine while every other panel themed correctly. */
+[class^="frameContainer"] {
+	background: var(--tt-chrome-bg) !important;
+	color: var(--tt-chrome-fg);
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 6px;
+	box-shadow: 0 8px 28px rgba(0,0,0,.55);
+	padding: 0;
+}
+[class^="frameContent"] { background: var(--tt-chrome-bg); color: var(--tt-chrome-fg); padding: 10px; }
+[class^="frameContainer"] [class^="frameCaption"] {
+	background: #2a2a38 !important;
+	color: var(--tt-chrome-fg);
+	border-bottom: 1px solid var(--tt-chrome-line);
+	border-radius: 5px 5px 0 0;
+	padding: 4px 9px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+/* Modal frames are <dialog> in the top layer; dim what is behind them. */
+dialog[class^="frameContainer"]::backdrop { background: rgba( 0, 0, 0, .45 ); }
+
+/* Notice/form bodies: the stock buttons are unreadable on the dark ground. */
+[class^="frameContent"] [class^="noticeText"] { color: var(--tt-chrome-fg); }
+[class^="frameForm"] { color: var(--tt-chrome-fg); }
+[class^="frameForm"] input[type=text],
+[class^="frameForm"] textarea,
+[class^="frameContent"] input[type=text],
+[class^="frameContent"] textarea {
+	background: #22222c;
+	color: var(--tt-chrome-fg);
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 4px;
+	padding: 4px 7px;
+	font: inherit;
+}
+
+/* -- property panel ------------------------------------------------------ */
+
+.tt-prop-form { display: flex; flex-direction: column; gap: 6px; min-width: 320px; }
+
+.tt-prop-row { display: flex; align-items: center; gap: 8px; }
+.tt-prop-row > label { flex: 0 0 42%; }
+.tt-prop-row input[type=color] { width: 34px; height: 24px; padding: 0; border: 0; background: none; }
+.tt-prop-text { flex: 1 1 auto; min-width: 0; }
+
+.tt-args {
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 4px;
+	padding: 6px 9px 9px;
+	margin: 2px 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+.tt-args > legend { padding: 0 5px; color: var(--tt-accent); font-size: 12px; }
+.tt-args-empty { color: #7f8ab0; font-size: 12px; }
+
+.tt-prop-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 10px;
+	padding-top: 9px;
+	border-top: 1px solid var(--tt-chrome-line);
+}
+
+/* -- cascade markers ------------------------------------------------------ */
+
+/* Where a value came from, so a preset is legible rather than mysterious. */
+.tt-prop-form .tt-from-preset .text-label,
+.tt-prop-form .tt-from-preset > label {
+	opacity: .68;
+	font-style: italic;
+}
+.tt-prop-form .tt-overridden .text-label,
+.tt-prop-form .tt-overridden > label {
+	font-weight: 600;
+}
+.tt-prop-form .tt-overridden .text-label::after,
+.tt-prop-form .tt-overridden > label::after {
+	content: " \2022";
+	color: var(--tt-accent);
+}
+
+.tt-prop-form .tt-preset-row {
+	padding-bottom: 6px;
+	margin-bottom: 4px;
+	border-bottom: 1px solid var(--tt-chrome-line);
+}
+
+.tt-revert {
+	flex: 0 0 auto;
+	margin-left: 6px;
+	background: transparent;
+	color: #9aa0b4;
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 4px;
+	padding: 0 6px;
+	line-height: 1.6;
+	cursor: pointer;
+}
+.tt-revert:hover { color: var(--tt-chrome-fg); border-color: var(--tt-accent); }
+
+/* -- image field ---------------------------------------------------------- */
+
+.tt-image-row { align-items: center; }
+
+.tt-image-thumb {
+	flex: 0 0 auto;
+	width: 30px;
+	height: 24px;
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 3px;
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	background-color: #14141a;
+}
+.tt-image-thumb.tt-image-empty {
+	/* a checker so "no image" reads as empty rather than as a black one */
+	background-image:
+		linear-gradient( 45deg, #2a2a38 25%, transparent 25%, transparent 75%, #2a2a38 75% ),
+		linear-gradient( 45deg, #2a2a38 25%, transparent 25%, transparent 75%, #2a2a38 75% );
+	background-size: 8px 8px;
+	background-position: 0 0, 4px 4px;
+}
+
+.tt-image-error {
+	position: fixed;
+	left: 50%;
+	bottom: 28px;
+	transform: translateX( -50% );
+	z-index: 9999;
+	max-width: 70vw;
+	padding: 9px 16px;
+	background: #4a1f1f;
+	color: #ffd9d9;
+	border: 1px solid #7a2b2b;
+	border-radius: 6px;
+	box-shadow: 0 8px 28px rgba(0,0,0,.6);
+	font-size: 13px;
+	cursor: pointer;
+}
+
+/* -- load failure --------------------------------------------------------- */
+
+/* Shown instead of the editor when a document could not be loaded. Never a
+   fallback to the seed document: the next Save would write it over real work. */
+.tt-fatal {
+	max-width: 34em;
+	margin: 12vh auto;
+	padding: 22px 26px;
+	background: #2a1a1a;
+	border: 1px solid #7a2b2b;
+	border-radius: 8px;
+	color: #ffd9d9;
+}
+.tt-fatal h2 { margin: 0 0 8px; font-size: 17px; }
+.tt-fatal p  { margin: 0 0 16px; color: #e8c0c0; line-height: 1.5; }
+.tt-fatal button {
+	background: #4a1f1f;
+	color: #ffd9d9;
+	border: 1px solid #7a2b2b;
+	border-radius: 4px;
+	padding: 5px 14px;
+	font: inherit;
+	cursor: pointer;
+}
+.tt-fatal button:hover { border-color: #b04545; }
+
+/* -- plugin panel --------------------------------------------------------- */
+
+.tt-plugins { min-width: 300px; }
+
+.tt-plugin-row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 3px 2px;
+	cursor: pointer;
+}
+.tt-plugin-row:hover { background: #22222c; border-radius: 4px; }
+
+.tt-plugin-name { flex: 1 1 auto; }
+
+/* Which halves a plugin has -- one-sided plugins are legal, and seeing which
+   is which explains why enabling one changes the create menu and another does not. */
+.tt-plugin-halves { flex: 0 0 auto; color: #7f8ab0; font-size: 12px; }
+.tt-plugin-broken { color: #d08080; }
+
+.tt-plugin-note {
+	margin: 12px 0 0;
+	padding-top: 9px;
+	border-top: 1px solid var(--tt-chrome-line);
+	color: #9aa0b4;
+	font-size: 12px;
+	line-height: 1.45;
+}
+.tt-plugin-path {
+	margin: 5px 0 0;
+	color: #6c7492;
+	font-family: ui-monospace, Consolas, monospace;
+	font-size: 11px;
+	word-break: break-all;
+}
+
+/* Buttons inside notice/form frames still carry popups2's light gradient,
+   which reads as a foreign widget on the dark ground. background-image:none
+   is required as well as a colour -- the stock look is a gradient, so setting
+   background-color alone leaves it unchanged. */
+[class^="frameContent"] button,
+[class^="frameForm"] button {
+	background-color: #2f3a4d;
+	background-image: none;
+	color: var(--tt-chrome-fg);
+	border: 1px solid var(--tt-chrome-line);
+	border-radius: 4px;
+	padding: 4px 14px;
+	font: inherit;
+	cursor: pointer;
+}
+[class^="frameContent"] button:hover,
+[class^="frameForm"] button:hover { border-color: var(--tt-accent); }
+[class^="frameContent"] button > *,
+[class^="frameForm"] button > * { color: inherit; background: none; }
+
+/* -- dialog tiers: panel < notice < alert -------------------------------- */
+
+/*
+ * Three levels of how much a frame should take your eye.
+ *
+ *   panel   the working surface -- property panels, plugins, page properties.
+ *           Recedes; you look at it because you went to it.
+ *   notice  a statement you must acknowledge. Lifted off the panel surface
+ *           and accent-edged, so it reads as "new" without shouting.
+ *   alert   something went wrong. INVERTED against the prevailing theme.
+ *
+ * The alert is deep red with white text in BOTH themes rather than inverting
+ * against each. A pale frame reads as "a dialog appeared"; this reads as
+ * alarm, which is the whole job. Keeping one alert colour also means the tier
+ * stays recognisable as itself whichever theme is running -- an alert that
+ * changed identity between light and dark would be a worse signal, not a
+ * better-matched one.
+ *
+ * White on #350000 is about 15:1, so the contrast is not the thing being
+ * traded away; only the surrounding chrome changes between themes.
+ */
+:root {
+	--tt-notice-bg:     #1f2434;
+	--tt-notice-cap:    #35456b;
+	--tt-notice-fg:     #e6ebf7;
+	--tt-notice-line:   #46578a;
+
+	--tt-alert-bg:      #350000;
+	--tt-alert-fg:      #ffffff;
+	--tt-alert-cap:     #8a1420;
+	--tt-alert-cap-fg:  #ffffff;
+	--tt-alert-line:    #a01824;
+	--tt-alert-ring:    rgba( 179, 36, 58, .45 );
+}
+
+:root[data-theme="light"] {
+	--tt-notice-bg:     #eef2fb;
+	--tt-notice-cap:    #ccd8f0;
+	--tt-notice-fg:     #1a1f2b;
+	--tt-notice-line:   #b9c6e0;
+
+	/* Same deep red: the alert keeps one identity across themes. Only the ring
+	   softens, because it sits against a light ground here. */
+	--tt-alert-bg:      #350000;
+	--tt-alert-fg:      #ffffff;
+	--tt-alert-cap:     #8a1420;
+	--tt-alert-cap-fg:  #ffffff;
+	--tt-alert-line:    #a01824;
+	--tt-alert-ring:    rgba( 122, 21, 38, .28 );
+}
+
+/*
+ * A user `suffix` lands BETWEEN the base and the kind ("frameContainer-x-notice"),
+ * so match on both fragments rather than a prefix -- `[class^="frameContainer-notice"]`
+ * would miss every suffixed instance.
+ *
+ * background-color keeps !important for the same reason the base rule does:
+ * popups2 injects its own stylesheet at runtime and the load order relative to
+ * this file is not guaranteed.
+ */
+[class*="frameContainer"][class*="-notice"] {
+	background-color: var(--tt-notice-bg) !important;
+	color: var(--tt-notice-fg);
+	border-color: var(--tt-notice-line);
+	box-shadow: 0 10px 34px rgba( 0, 0, 0, .6 );
+}
+[class*="frameContainer"][class*="-notice"] [class*="frameCaption"] {
+	background: var(--tt-notice-cap) !important;
+	color: var(--tt-notice-fg);
+	border-bottom-color: var(--tt-notice-line);
+}
+[class*="frameContainer"][class*="-notice"] [class*="frameContent"] {
+	background: var(--tt-notice-bg);
+	color: var(--tt-notice-fg);
+}
+
+.alert-form,
+[class*="frameContainer"][class*="-alert"] {
+	background-color: var(--tt-alert-bg) !important;
+	color: var(--tt-alert-fg);
+	border: 2px solid var(--tt-alert-line);
+	border-radius: 6px;
+	/* A ring rather than a pulse: eye-catching without moving, which also
+	   means nothing to suppress under prefers-reduced-motion. */
+	box-shadow: 0 0 0 4px var(--tt-alert-ring), 0 12px 40px rgba( 0, 0, 0, .55 );
+}
+.alert-form [class*="frameCaption"],
+[class*="frameContainer"][class*="-alert"] [class*="frameCaption"] {
+	background: var(--tt-alert-cap) !important;
+	color: var(--tt-alert-cap-fg);
+	border-bottom: 0;
+	font-weight: 700;
+}
+.alert-content,
+.alert-message,
+[class*="frameContainer"][class*="-alert"] [class*="frameContent"] {
+	background: var(--tt-alert-bg);
+	color: var(--tt-alert-fg);
+}
+
+/* The generic button rule above assumes a dark ground; an alert is not one. */
+.alert-form button,
+[class*="frameContainer"][class*="-alert"] button {
+	background-color: var(--tt-alert-cap);
+	background-image: none;
+	color: var(--tt-alert-cap-fg);
+	border: 1px solid var(--tt-alert-line);
+}
+.alert-form button:hover,
+[class*="frameContainer"][class*="-alert"] button:hover {
+	background-color: var(--tt-alert-line);
+	border-color: var(--tt-alert-fg);
+}
+
+/* popups2 sets the alert message to 42px deliberately -- an alert is meant to
+   be loud, so the size stays. Only the box is tightened: at full width the
+   text pinned to the top-left of a mostly empty rectangle reads as a layout
+   accident rather than as emphasis. */
+.alert-form,
+[class*="frameContainer"][class*="-alert"] {
+	max-width: min( 46rem, 86vw );
+	/* A guard, not the fix -- the width is corrected below. Kept so no future
+	   content can spill past the border either. */
+	overflow: hidden;
+}
+/* The message carries its own width from popups2, so capping only the frame
+   let 42px text run straight out of the box.
+   
+   max-width:100% alone was not enough: the content also carries margin:5px,
+   and margins sit OUTSIDE max-width -- so a 100%-wide box plus 10px of margin
+   overflowed its parent by exactly that much. Drop the margin and let width
+   be auto, so block layout fits it to the frame. */
+.alert-form [class*="frameContent"] {
+	width: auto;
+	margin: 0;
+}
+.alert-form [class*="frameContent"],
+.alert-message {
+	max-width: 100%;
+	box-sizing: border-box;
+	white-space: normal;
+	overflow-wrap: anywhere;
+}
+.alert-message {
+	text-align: center;
+	text-wrap: balance;
+	line-height: 1.2;
+}
+
+/* -- page order ----------------------------------------------------------- */
+
+.tt-page-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 2px 0;
+}
+.tt-page-row.tt-page-current .tt-page-name { color: var(--tt-accent); font-weight: 600; }
+
+.tt-page-name {
+	flex: 1 1 auto;
+	text-align: left;
+	background: transparent;
+	background-image: none;
+	color: var(--tt-chrome-fg);
+	border: 1px solid transparent;
+	border-radius: 4px;
+	padding: 3px 7px;
+	font: inherit;
+	cursor: pointer;
+}
+.tt-page-name:hover { border-color: var(--tt-chrome-line); background: #22222c; }
+
+/* Which rows are in the attract loop -- its order is this order. */
+.tt-page-marks { flex: 0 0 auto; color: #7f8ab0; font-size: 11px; white-space: nowrap; }
+
+.tt-page-row .tt-revert:disabled { opacity: .3; cursor: default; }
