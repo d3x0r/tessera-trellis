@@ -241,6 +241,45 @@ Same caveat as actions: the session is the gate. Binding arguments to the
 control means a receipt list scoped to one till cannot be re-pointed at another
 by a client editing its own query — useful, but not the wall.
 
+### Press-time input: names, not wires
+
+Nothing in a document wires a field to a button. Controls that *produce* a
+value publish it under a **name** (`ui/core/inputs.js`); controls that
+*consume* one send everything currently published, and the server keeps only
+the keys the action or source declares. So a designer types the name once, on
+the producer, and any button on the document carries it.
+
+| control | publishes |
+|---|---|
+| `data/Field` | its value, under its `name` property — as soon as it is shown, so a default counts |
+| `data/Table` | the picked row's `inputKey` column (default `Id`), under its `inputName` — cleared if the row disappears on refresh |
+| anything else | `el.dispatchEvent( new CustomEvent( "tt-input", { bubbles:true, detail:{ name, value } } ) )` |
+
+A `Button` sends the lot with `invoke`; a `Table` sends the lot with every
+`query`, and re-queries when an input named in its `dependsOn` changes, after
+any successful press (`tt-invoked`), and on a `tt-refresh` event — which is
+what a plugin's client half dispatches when the server broadcasts a change.
+
+### The Table is a popups2 DataGrid
+
+`data/Table` renders with `@d3x0r/popups2/controls/data-grid.js`, read-only,
+so column sorting comes for free (click a header) and `filter: true` adds the
+grid's per-column filter row. Filtering is local to the rows the grid holds;
+`serverFilter: true` additionally re-queries the source with
+`filters: [ { field, value } ]` as input, debounced, for a source that only
+returned a page (the Recent sessions list, capped at 60). Row selection is not
+a grid feature and is delegated on top of it; typed columns are spelled
+year-first so the grid's text sort orders dates correctly. `renderRows()` is
+still exported for plugins and returns the grid, with the same `filter` /
+`onFilter` options, which is how a player search can re-fill on each keystroke.
+
+One namespace per window, deliberately: a session picked on the "Sessions"
+page is still the selected session on the "Games" page, which is what lets a
+two-page workflow exist without a variable for it. The cost is that names are
+global to the document, so a source's runtime filter must not share a name
+with a field that means something else (the sessions source filters on
+`search`, because the new-day form has a field called `name`).
+
 ## Writing a plugin
 
 A plugin has two halves in two directories, because a plugin's server code must
@@ -417,6 +456,35 @@ Four things that are easy to get wrong here:
   design time.
 - **The URL runs through `expand()`**, so `%Host Mode Select` substitutes and
   the frame re-points when the variable changes — the same binding labels use.
+  A variable may be the whole URL or any part of one (`https://%Station/panel`),
+  since `expand()` scans rather than matching the whole string.
+
+#### A URL that is only a %variable
+
+Blank → value is the normal first step for such a URL, and two things besides
+`src` depend on there being a URL at all: the scrim shows while there is none,
+and `startRefresh()` bails on an empty `src`. Both used to be called from
+`update()` only, so a frame that started blank kept a "no URL set" scrim over
+the loaded page and never got its refresh timer. The watch callback now carries
+all three, and both are idempotent so calling them per apply is free.
+
+`setSrc()` still compares the **resolved** URL, so a variable that changes to
+the same value does not reload the frame.
+
+**A variable defined *after* the watch is bound now reaches it.** It could not
+before: `referencedBy()` can only find names that already exist, because with
+no delimiter in the spelling `%Station/panel` is undecidable between
+"Station" and "Station/panel" until the registry says which is real. So a text
+mentioning a name that did not exist yet subscribed to nothing and could never
+be found afterwards. `defineVariable()` re-scans the live watches when a **new**
+name appears — an application-load event, not anything on the update path — and
+the reconcile drops names as well as adding them, since a longer name appearing
+changes what an existing text resolves to.
+
+That leaves one wart, and it is inherent: an unexpanded `%Name` stays literal in
+the text, so a URL resolved before its variable exists is normalised into
+`http://%Name` and attempted. It self-corrects on the define. (`expand()` leaves
+a non-matching `%` alone, so ordinary percent-encoding such as `%20` is safe.)
 
 #### URLs
 
@@ -768,6 +836,68 @@ document loaded from storage still says `%Clock`, and something has to know
 what Clock is. Folding variable definitions into the seed-document function is
 exactly what broke substitution once documents started coming from the server.
 
+### The sideplayr sessions plugin
+
+The first piece of the sideplayr client application, and the worked example of
+the above: `plugins: [ "sessions" ]` plus a `sideplayr` block in `config.jsox`
+naming the database DSN and the `sideplayr_core` tree the schema classes come
+from. It opens the same MariaDB the game proxy runs on and seeds a document
+called **Session Manager** (`?doc=Session%20Manager`) the first time only —
+after that the designer owns it.
+
+A bingo day is a `game_sessions` row; a new one is **cloned** from a session
+marked as a template (`isClonable`), with its games (runtime state reset), its
+per-game pack rules (`session_package_types`, re-pointed at the new games) and
+its per-session configuration (`session_pos_layouts`, `session_scheme_inventories`,
+`collection_session`; the list is `sideplayr.cloneTables`). The legacy
+`Create_Session` procedure copied a 2018 subset of columns; this copies the
+column list the classes declare. Then a session is renamed or rescheduled, put
+on the floor in a room (`game_rooms.SessionId`), taken through Live / Pause /
+Completed, soft-deleted, or marked as a template for next time.
+
+| half | what it holds |
+|---|---|
+| `server/plugins/sessions.mjs` | sources `sessions`, `sessionGames`, `rooms`, `sessionStatuses`; actions `cloneSession`, `updateSession`, `setSessionStatus`, `setSessionClonable`, `deleteSession`, `assignSessionRoom`, `clearSessionRoom` |
+| `server/plugins/sessions/logic.mjs` | the SQL, pure over a db — `tt-sessions-test.mjs` drives it on a sqlite file built from the real classes |
+| `server/plugins/sessions/document.mjs` | the seed document |
+| `ui/plugins/sessions/index.js` | `%Selected Session`, `%Session Result`, and the `sessionsChanged` → `tt-refresh` relay |
+
+The games page shows each game's pattern as an animated preview and, clicked,
+opens the pattern editor to choose another. Both come from the pattern
+service (`sideplayr.patternService`): the plugin's client half registers a
+`pattern` **cell type** (`registerCellType` in `controls/table.js`), and the
+games source marks its column `type:"pattern"` with the service's URL. The
+cell imports `patternPreview.js` and `patternPicker.js` from that origin;
+the picker hosts the service's `index.html?picker=1` in an iframe and resolves
+with the chosen id over postMessage, and the cell sends it through the table's
+own `action` (`setGamePattern`), which is a button press by another name.
+
+Each game row also has an **Edit…** button (cell type `details`) that opens a
+detail editor over the page — paged, with a tab per game number and Prev /
+Next, so a session is walked through game by game; unsaved edits ask before
+the page changes. The form is built from what the server sends:
+the `gameDetails` action answers with a field schema (`GAME_FIELDS` in
+`logic.mjs`: groups, types, option lists resolved from the lookup tables) and
+the game's values, and `updateGame` takes edited values back, so adding a
+field is one line in the schema. Packs are the legacy multi-select: stored as
+CSV text in `games.PackageTypeId` and as one `session_package_types` row per
+pack, and the editor keeps both in step. A control with several things to do
+names them by **slot** (`actions: { details: "gameDetails", save: "updateGame" }`);
+the client sends the slot with the press and the server still resolves the
+action from the document, so the security model is unchanged.
+
+After every change the plugin also tells the game proxy
+(`sideplayr.gameProxy`, ServiceProxy op `refreshSessions`) to re-read its
+session list, so the caller and floor pick up a day created here; a proxy
+that is down or predates the op is logged once and otherwise ignored.
+
+`CreatedBy` on a new session is the ticket's `gameproxy.employeeId`; an
+anonymous connection keeps the template's creator and says so in the log.
+Security is set on the document's controls in the designer, not on the actions
+here: which position may press "Go Live" is a hall's decision, in its own
+vocabulary. Not yet here, and next: assigning a bank to a session
+(`game_sessions.bank_relation_id` is waiting for it) and issuing it to cashiers.
+
 ## Creating controls: the right-click tree
 
 Control names are **paths**, as they were in the C registry (`pages.h` spelled
@@ -804,6 +934,82 @@ Pages are soft-deleted, which is why the original had both Destroy and
 Undestroy. The flag is a private field so it never serializes, and `compact()`
 drops the pages on the way to storage — undestroy reaches back exactly as far
 as the last save.
+
+## Sessions: a ticket, not a login
+
+Security asks what a session may do. This is where a session comes from — and
+it is deliberately **not** a login form. This service never sees a credential.
+
+Whoever does the authenticating calls `expect` over a private backchannel with
+the session it wants us to hold, gets an opaque id back, and hands that id to
+the browser along with where to connect. The browser presents it and nothing
+else. It is the `@d3x0r/user-database-remote` flow, and the same shape the
+sideplayr `/go/` station page already has: it knows the machine, assigns the
+room and the role, and redirects to the app anyway.
+
+```
+login server ──── expect(session) ───▶ tessera        (secret, private)
+             ◀─── ticket ────────────
+      │
+      └──── redirect ?ticket=… ──▶ browser ──── hello(ticket) ──▶ tessera
+```
+
+Three things fall out of that, and all three are the reason for it:
+
+- **The session arrives already resolved.** sideplayr owns `positions`,
+  `position_permissions` and `roleAllowsModulePermission`, so sideplayr does
+  the lookup once and sends the answers. This service holds no user database,
+  opens no connection, and its security provider is a pure function.
+- **No login UI lives here**, so an app built on this does not have to be the
+  whole application to be able to gate anything.
+- **The ticket is single use and short lived** (60s by default). A durable
+  credential must never be substituted for one: sideplayr's employee token
+  columns are long-lived, live on the employee row and are already kept in
+  browser `localStorage`, and one in a redirect URL lands in history, referrer
+  headers and every proxy log between there and here.
+
+On the browser side both entry points call `protocol.redeemTicketFromUrl()`
+before the first `loadDocument`: a `?ticket=` on the launch URL is presented
+with `hello`, then removed from the address bar with `history.replaceState`,
+so a reload does not present a spent ticket and a bookmark never holds one.
+Nothing else in the page ever sees it.
+
+### Why redemption is an op and not an action
+
+`registerAction` looks like the obvious home for "log in", and cannot be. An
+action is handed a *copy* of the session, so it cannot replace it; and `invoke`
+only accepts a control the loaded document wires, so it could not run until a
+document had been fetched — which is the very step that filters on the session.
+The session has to exist before the first `loadDocument`. So `server/session.mjs`
+owns the WeakMap that used to be private to `protocol.mjs`, and the protocol has
+two ops:
+
+```js
+{ op:"expect", secret, session, ttl }   // → { op:"expected", ok, ticket, expires }
+{ op:"hello",  ticket }                 // → { op:"hello", ok, who }
+```
+
+`expect` is **refused entirely when `expectSecret` is not configured**. An
+unconfigured deployment must not be one where reaching the port is enough to
+mint a session. It rides the same socket a browser uses, so the secret is the
+whole of the guard — keep it out of anything served to a browser.
+
+The `hello` reply says whether a session was established and who arrived. It
+never says what they may do: a wrong ticket, an expired one, one for a provider
+this deployment does not run, and a malformed one are indistinguishable from
+outside, and withheld controls never arrive anyway.
+
+### Providers
+
+```js
+registerSessionProvider( "hall", { redeem( ticket ) { … } } );   // null = not mine
+```
+
+First non-null wins and its name lands on `session.via`. A provider that throws
+denies without stopping the others — a backchannel being down must not decide
+for a login that still works. The built-in `ticket` provider is registered the
+same way, so a deployment that authenticates some other way can simply not use
+it.
 
 ## Security
 

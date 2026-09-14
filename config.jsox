@@ -20,5 +20,35 @@
 	plugins: [
 		"iframe",
 		"players",
+		// server-only: the sideplayr security provider.  Registered even where
+		// no sideplayr session ever arrives, because a document carrying a
+		// {gameproxy:...} requirement with the plugin absent fails CLOSED --
+		// correct, but a confusing way to find out it was not loaded.
+		"gameproxy",
+		// sideplayr bingo-day sessions: create/clone, status, rooms.  Needs
+		// the `sideplayr` block below to reach the database.
+		"sessions",
 	],
+
+	/*
+	 * Where the sideplayr database and its schema classes are.
+	 *
+	 *   corePath   the sideplayr_core tree (bingo/database/classes/...).
+	 *              Relative to this directory.  Points at the MAIN sideplayr
+	 *              checkout, where the bank and the schema now live.
+	 *   db.DSN     an ODBC DSN name, or a path to a sqlite .db file.
+	 *              SIDEPLAYR_DSN in the environment overrides it.
+	 *   gameProxy  the game proxy's websocket; told to re-read its session
+	 *              list after every change here (ServiceProxy protocol,
+	 *              op refreshSessions).  Absent: ws://localhost:8087/
+	 *   patternService  where the pattern editor service is; the games
+	 *              table imports its preview and picker from there.
+	 *              Absent: http://localhost:8085
+	 */
+	sideplayr: {
+		corePath: "../../../sideplayr/sideplayr_core",
+		db: { DSN: "MySQL" },
+		gameProxy: "ws://localhost:8087/",
+		patternService: "http://localhost:8085",
+	},
 }

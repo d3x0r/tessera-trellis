@@ -32,7 +32,13 @@ export function defineVariable( name, valueOrGetter ) {
 	const isProc = typeof valueOrGetter === "function";
 	vars.set( name, { value: isProc ? undefined : valueOrGetter,
 	                  get: isProc ? valueOrGetter : null, subs } );
-	if( !existing ) reindex();
+	/*
+	 * A new name can change what existing texts resolve to, so re-scan the
+	 * live watches before notifying -- anything that now references this name
+	 * is subscribed by then and hears about it through notify() below, rather
+	 * than needing a second call here.
+	 */
+	if( !existing ) { reindex(); for( const entry of watches ) bind( entry ); }
 	notify( name );
 	return name;
 }
@@ -105,17 +111,58 @@ export function expand( text ) {
 	return out;
 }
 
+/*
+ * Every live watch, so a variable DEFINED LATER can still reach the text that
+ * mentions it.
+ *
+ * referencedBy() can only find names that already exist -- with no delimiter,
+ * '%Station/panel' is undecidable between "Station" and "Station/panel" until
+ * the registry says which one is real -- so a text mentioning a variable that
+ * does not exist yet subscribes to nothing, and defineVariable() has no way to
+ * find it afterwards.  Keeping the watches lets a new name re-scan them.
+ *
+ * The rescan runs only when a NEW name appears, which is an application-load
+ * event rather than anything on the update path.
+ */
+const watches = new Set();
+
 /**
- * Call cb whenever any variable referenced by text changes.
+ * Reconcile one watch against the current registry.
+ *
+ * Names are dropped as well as added, because a longer name appearing changes
+ * what an existing text resolves to: '%Host Mode Select' matches "Host" while
+ * that is all there is, and must stop doing so once the full name is defined.
+ */
+function bind( entry ) {
+	const want = new Set( referencedBy( entry.text ) );
+	for( const name of entry.names ) {
+		if( want.has( name ) ) continue;
+		const v = vars.get( name );
+		if( v ) v.subs.delete( entry.cb );
+		entry.names.delete( name );
+	}
+	for( const name of want ) {
+		if( entry.names.has( name ) ) continue;
+		entry.names.add( name );
+		vars.get( name ).subs.add( entry.cb );
+	}
+}
+
+/**
+ * Call cb whenever any variable referenced by text changes -- including one
+ * defined after this call, which then notifies through the usual path.
  * @returns {Function} unsubscribe
  */
 export function watch( text, cb ) {
-	const names = referencedBy( text );
-	for( const name of names ) vars.get( name ).subs.add( cb );
+	const entry = { text, cb, names: new Set() };
+	bind( entry );
+	watches.add( entry );
 	return () => {
-		for( const name of names ) {
+		watches.delete( entry );
+		for( const name of entry.names ) {
 			const v = vars.get( name );
 			if( v ) v.subs.delete( cb );
 		}
+		entry.names.clear();
 	};
 }

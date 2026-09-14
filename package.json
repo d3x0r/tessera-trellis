@@ -6,7 +6,7 @@
 	"main": "server/server.mjs",
 	"scripts": {
 		"start": "node --import sack.vfs/import server/server.mjs",
-		"test": "node --import sack.vfs/import ./tt-history-test.mjs && node --import sack.vfs/import ./tt-url-test.mjs && node --import sack.vfs/import ./tt-idle-test.mjs && node --import sack.vfs/import ./tt-saver-test.mjs && node --import sack.vfs/import ./tt-security-test.mjs"
+		"test": "node --import sack.vfs/import ./tt-history-test.mjs && node --import sack.vfs/import ./tt-url-test.mjs && node --import sack.vfs/import ./tt-variables-test.mjs && node --import sack.vfs/import ./tt-idle-test.mjs && node --import sack.vfs/import ./tt-saver-test.mjs && node --import sack.vfs/import ./tt-security-test.mjs && node --import sack.vfs/import ./tt-session-test.mjs && node --import sack.vfs/import ./tt-ticket-wire-test.mjs && node --import sack.vfs/import ./tt-sessions-test.mjs"
 	},
 	"author": "d3x0r",
 	"license": "LGPL-3.0",

@@ -48,13 +48,17 @@ class Protocol extends Protocol_ {
 				settle( msg );
 			} );
 
-		this.on( "invoked", ( msg ) => {
-			const settle = this.#invokes.get( msg.token );
-			if( !settle ) return;
-			this.#invokes.delete( msg.token );
-			settle( msg );
-		} );
+		for( const op of [ "invoked", "hello" ] )
+			this.on( op, ( msg ) => {
+				const settle = this.#invokes.get( msg.token );
+				if( !settle ) return;
+				this.#invokes.delete( msg.token );
+				settle( msg );
+			} );
 	}
+
+	/** Who the redeemed ticket said we are, for the page's own chrome; else null. */
+	who = null;
 
 	#awaitToken( token, ms = REQUEST_TIMEOUT ) {
 		return new Promise( ( resolve ) => {
@@ -94,6 +98,36 @@ class Protocol extends Protocol_ {
 		while( !this.ready && Date.now() < until )
 			await new Promise( r => setTimeout( r, 50 ) );
 		return this.ready;
+	}
+
+	/**
+	 * Present a ticket somebody else minted for us (see server/session.mjs).
+	 * The reply says only whether a session was established and who arrived.
+	 */
+	hello( ticket ) {
+		const token = "h" + ( ++this.#invokeSerial );
+		const wait = this.#awaitToken( token );
+		this.send( { op: "hello", token, ticket } );
+		return wait;
+	}
+
+	/**
+	 * Redeem the ?ticket= a login server appended to the launch URL, then take
+	 * it OUT of the address bar: it is single use, so a reload would present a
+	 * spent ticket, and it has no business in a bookmark.  Must run before the
+	 * first loadDocument, which is what filters on the session.
+	 * @returns {Promise<{ok:boolean, who?:string}|null>} null when no ticket
+	 */
+	async redeemTicketFromUrl() {
+		const url = new URL( location.href );
+		const ticket = url.searchParams.get( "ticket" );
+		if( !ticket ) return null;
+		url.searchParams.delete( "ticket" );
+		try { history.replaceState( null, "", url.toString() ); } catch( err ) { /* ignore */ }
+		if( !await this.whenReady() ) return { ok: false };
+		const reply = await this.hello( ticket );
+		this.who = reply && reply.ok ? reply.who : null;
+		return reply;
 	}
 
 	/**
@@ -199,11 +233,12 @@ class Protocol extends Protocol_ {
 	 * reads those from its own copy of the document.  All this may carry is the
 	 * control id and whatever the user supplied at press time.
 	 */
-	invoke( controlId, input ) {
+	invoke( controlId, input, slot ) {
 		const token = "i" + ( ++this.#invokeSerial );
 		const wait = this.#awaitToken( token );
 		this.send( { op: "invoke", token,
-		             document: this.document, control: controlId, input: input || {} } );
+		             document: this.document, control: controlId, input: input || {},
+		             ...( slot ? { slot } : {} ) } );
 		return wait;
 	}
 }

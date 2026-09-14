@@ -60,7 +60,10 @@ export function mergeServerActions( list ) {
  *          input?:object}} ctx
  */
 export function invoke( control, ctx ) {
-	const name = control.props && control.props.action;
+	const props = control.props || {};
+	// ctx.slot picks one of several named actions (props.actions[slot]);
+	// without it the control's single `action` is meant.
+	const name = ctx.slot ? ( props.actions || {} )[ ctx.slot ] : props.action;
 	if( !name ) return null;
 
 	const def = actions.get( name );
@@ -70,7 +73,7 @@ export function invoke( control, ctx ) {
 	}
 
 	if( def.where === "client" )
-		return def.run( { control, args: control.props.actionArgs || {}, ...ctx } );
+		return def.run( { control, args: ( ctx.slot ? ( props.actionsArgs || {} )[ ctx.slot ] : props.actionArgs ) || {}, ...ctx } );
 
 	if( !ctx.protocol ) {
 		console.warn( `action '${name}' is server-side but no protocol is connected` );
@@ -83,7 +86,7 @@ export function invoke( control, ctx ) {
 	 * those from the document so a client cannot name an action it was never
 	 * given, or hand it arguments of its own choosing.
 	 */
-	return ctx.protocol.invoke( control.id, ctx.input || {} );
+	return ctx.protocol.invoke( control.id, ctx.input || {}, ctx.slot );
 }
 
 // -- stock client actions -------------------------------------------------

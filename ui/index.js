@@ -30,6 +30,7 @@ import "./controls/button.js";
 import "./controls/label.js";
 import "./controls/session.js";
 import "./controls/table.js";
+import "./controls/field.js";
 
 /*
  * A document IS an application; the server holds many and the URL picks one.
@@ -88,6 +89,9 @@ async function loadCanvas() {
 	return seeded;
 }
 
+// A ticket on the URL is redeemed BEFORE the document is fetched, because the
+// fetch is what filters on the session; afterwards would show the anonymous view.
+await protocol.redeemTicketFromUrl();
 await loadPlugins();
 const canvas = await loadCanvas();
 const view = new CanvasView( canvas, stage );

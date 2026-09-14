@@ -203,12 +203,27 @@ registerControl( "web/Web Page", {
 		else s.frame.removeAttribute( "allow" );
 
 		if( s.unwatch ) s.unwatch();
-		const apply = () => setSrc( el, normalizeUrl( expand( p.url ) ) );
+		/*
+		 * A variable change re-points the frame, and has to carry the other two
+		 * things that depend on there being a URL at all.  Both matter on the
+		 * blank -> value step, which is the normal case for a URL that is
+		 * nothing but a %variable:
+		 *
+		 *   - the scrim shows while there is no URL, and would otherwise stay
+		 *     up over the loaded frame still captioned "no URL set";
+		 *   - startRefresh() bails on an empty src, so a frame that began blank
+		 *     would never get its refresh timer.
+		 *
+		 * Both are idempotent, so calling them on every apply is safe -- which
+		 * is why update() no longer ends with a separate pair of calls.
+		 */
+		const apply = () => {
+			setSrc( el, normalizeUrl( expand( p.url ) ) );
+			startRefresh( el, inst );
+			paintScrim( el, inst );
+		};
 		apply();
 		s.unwatch = watch( p.url, apply );
-
-		startRefresh( el, inst );
-		paintScrim( el, inst );
 	},
 
 	onShow( el, inst )  { startRefresh( el, inst ); },

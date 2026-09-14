@@ -20,6 +20,7 @@ import { commonButtonProperties } from "../core/properties.js";
 import { expand, watch } from "../core/variables.js";
 import { getGlareSet, createColorFilter } from "../core/glare.js";
 import { invoke } from "../core/actions.js";
+import { gatherInputs } from "../core/inputs.js";
 
 /*
  * The protocol is optional: a runtime page with no server connection still
@@ -135,10 +136,13 @@ registerControl( "Button", {
 
 			el.disabled = true;
 			try {
+				// Press-time input: every value a Field or a Table selection
+				// has published.  Over-sending is harmless -- the server keeps
+				// only the keys the action's input schema declares.
 				const reply = await invoke( inst, {
 					element: el,
 					protocol: getProtocol(),
-					input: {},
+					input: gatherInputs(),
 				} );
 				if( reply && reply.ok === false )
 					console.warn( `action refused: ${reply.error}` );

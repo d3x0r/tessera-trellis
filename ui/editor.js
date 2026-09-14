@@ -41,6 +41,7 @@ import "./controls/button.js";
 import "./controls/label.js";
 import "./controls/session.js";
 import "./controls/table.js";
+import "./controls/field.js";
 
 /*
  * A document IS an application; the server holds many and the URL picks one.
@@ -139,6 +140,7 @@ async function loadCanvas() {
 	return seeded;
 }
 
+await protocol.redeemTicketFromUrl();
 await loadPlugins();
 const canvas  = await loadCanvas();
 /*

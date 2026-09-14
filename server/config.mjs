@@ -21,6 +21,16 @@ const DEFAULTS = {
 	port: 8099,
 	/** "*" loads every plugin found on disk; an array selects them explicitly. */
 	plugins: "*",
+	/*
+	 * Shared secret for the `expect` op -- the backchannel a login server uses
+	 * to mint a session ticket.  DELIBERATELY absent from the defaults: with no
+	 * value the op refuses every call, so a deployment that has not thought
+	 * about it is not one where reaching the port is enough to mint a session.
+	 * Set it in config.jsox on both this service and whoever calls it, and keep
+	 * it out of anything served to a browser.
+	 *
+	 *   expectSecret: "...",
+	 */
 };
 
 /**

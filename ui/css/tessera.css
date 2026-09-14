@@ -161,6 +161,104 @@ html, body {
 	font-size: clamp( 9px, 1.6vh, 15px );
 }
 
+/* The popups2 DataGrid inside a Table control.  Its stylesheet is not loaded
+   here (it restyles every td/th on the page), so the few rules it needs are
+   scoped to the host; the grid names its classes "data-grid-<part> tt-grid". */
+.tt-table-host .data-grid-container { width: 100%; }
+.tt-table-host [class^="data-grid-table"] { width: 100%; border-collapse: collapse; margin: 0; }
+.tt-table-host [class^="data-grid-header-row"] td {
+	position: sticky;
+	top: 0;
+	text-align: left;
+	padding: 4px 8px;
+	background: #2a2a38;
+	border-bottom: 1px solid rgba(255,255,255,.15);
+	font-weight: 600;
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+}
+.tt-table-host [class^="data-grid-header-sort"] { float: right; opacity: .7; margin-left: .5em; }
+.tt-table-host [class^="data-grid-filter-row"] td { padding: 2px 4px; background: #1c1c26; }
+.tt-table-host [class^="data-grid-filter-input"] {
+	box-sizing: border-box;
+	width: 100%;
+	min-width: 3em;
+	padding: 3px 6px;
+	background: #22222c;
+	color: inherit;
+	border: 1px solid rgba(255,255,255,.15);
+	border-radius: 3px;
+	font: inherit;
+}
+.tt-table-host [class^="data-grid-row"] td { padding: 3px 8px; border-bottom: 1px solid rgba(255,255,255,.06); }
+.tt-table-host [class^="data-grid-row"]:hover { background: rgba(255,255,255,.05); cursor: default; }
+.tt-table-host [class^="data-grid-row"].tt-row-selected { background: rgba(120,190,255,.22); }
+.tt-table-host .tt-grid-right { text-align: right; }
+.tt-table-host .tt-grid-center { text-align: center; }
+
+/* Pattern cell: preview beside the name. */
+.tt-pattern-cell { cursor: pointer; white-space: nowrap; }
+.tt-pattern-preview { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.tt-pattern-preview canvas { display: block; }
+
+/* Detail editor: an overlay form built from a server-sent field schema. */
+.tt-record-overlay {
+	position: fixed; inset: 0; z-index: 90000;
+	background: rgba(0,0,0,.55);
+	display: flex; align-items: center; justify-content: center; padding: 2vh 2vw;
+}
+.tt-record {
+	background: #1e1e28; color: #e8ecff;
+	border: 1px solid rgba(255,255,255,.2); border-radius: 6px;
+	width: min(96vw, 64em); max-height: 94vh; overflow: auto;
+	padding: 1em 1.25em; font-size: clamp( 11px, 1.7vh, 15px );
+	box-shadow: 0 10px 40px rgba(0,0,0,.6);
+}
+.tt-record h2 { margin: 0 0 .5em; font-size: 1.3em; }
+.tt-record-group { margin: .8em 0 .3em; color: #8fd3ff; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,.12); }
+.tt-record-fields { display: grid; grid-template-columns: repeat( auto-fill, minmax( 15em, 1fr ) ); gap: .5em .9em; }
+.tt-record-field { display: flex; flex-direction: column; gap: 2px; }
+.tt-record-field > span { color: #9aa4c8; font-size: .9em; }
+.tt-record-field input[type=text], .tt-record-field input[type=number], .tt-record-field select {
+	padding: 4px 7px; background: #22222c; color: inherit;
+	border: 1px solid rgba(255,255,255,.15); border-radius: 4px; font: inherit; color-scheme: dark;
+}
+.tt-record-check { flex-direction: row; align-items: center; gap: .5em; padding-top: 1.1em; }
+.tt-record-multi { display: flex; flex-wrap: wrap; gap: .3em .9em; padding: 4px 0; max-height: 9em; overflow: auto; }
+.tt-record-multi label { display: inline-flex; align-items: center; gap: .3em; white-space: nowrap; }
+.tt-record-pattern { display: flex; align-items: center; gap: .6em; }
+.tt-record-buttons { display: flex; gap: .6em; justify-content: flex-end; margin-top: 1em; }
+.tt-record-buttons button, .tt-record-pattern button, .tt-details-button {
+	padding: 5px 14px; border-radius: 4px; border: 1px solid rgba(255,255,255,.25);
+	background: #2a3a8f; color: #fff; font: inherit; cursor: pointer;
+}
+.tt-record-buttons button.tt-record-cancel { background: #3a3a4a; }
+.tt-details-button { padding: 2px 9px; background: #3a3a4a; }
+.tt-record-status { margin-top: .6em; color: #ffb080; min-height: 1.2em; }
+.tt-record-buttons button.tt-record-nav { background: #2a2a38; }
+.tt-record-buttons button:disabled { opacity: .4; cursor: default; }
+
+/* The pager: a column of tabs, one per game, down the left of the editor. */
+.tt-record-pager { display: flex; gap: 0; padding: 0; overflow: hidden; }
+.tt-record-pager > div:last-child { flex: 1 1 auto; min-width: 0; overflow: auto; padding: 1em 1.25em; }
+.tt-record-tabs {
+	flex: 0 0 auto; display: flex; flex-direction: column; gap: 3px;
+	overflow-y: auto; padding: .6em .4em; background: #16161e;
+	border-right: 1px solid rgba(255,255,255,.15);
+}
+.tt-record-tab {
+	flex: 0 0 auto; min-width: 2.6em; padding: 4px 8px; border-radius: 4px 0 0 4px;
+	border: 1px solid rgba(255,255,255,.15); border-right: 0; text-align: right;
+	background: #2a2a38; color: #c8cfe8; font: inherit; cursor: pointer;
+}
+.tt-record-mismatch { color: #ffb080; }
+.tt-record-unpaid { color: #ff7f9f; }
+.tt-record-tab { text-align: left; white-space: nowrap; max-width: 12em; overflow: hidden; text-overflow: ellipsis; }
+.tt-record-tab-no { display: inline-block; min-width: 1.6em; text-align: right; color: #8fd3ff; margin-right: .3em; }
+.tt-record-tab.tt-record-tab-current { background: #2a3a8f; color: #fff; }
+.tt-record-tab.tt-record-tab-dirty::after { content: " •"; color: #ffb080; }
+
 .tt-table { width: 100%; border-collapse: collapse; }
 
 .tt-table th {
@@ -188,6 +286,26 @@ html, body {
 	font: inherit;
 }
 .tt-search-results { flex: 1 1 auto; min-height: 0; }
+
+/* Field: a labelled input whose value is press-time input. */
+.tt-field {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	gap: 3px;
+	font-size: clamp( 10px, 1.8vh, 16px );
+}
+.tt-field-label { color: #9aa4c8; font-weight: 600; }
+.tt-field-box {
+	flex: 0 0 auto;
+	padding: 5px 9px;
+	background: #22222c;
+	color: inherit;
+	border: 1px solid rgba(255,255,255,.15);
+	border-radius: 4px;
+	font: inherit;
+	color-scheme: dark;
+}
 
 /* Page background video -- behind every control by DOM order, and never a
    pointer target: a <video> swallows clicks the way an iframe does. */

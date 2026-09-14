@@ -18,6 +18,8 @@ import * as actions from "./actions.mjs";
 import * as sources from "./sources.mjs";
 import * as assets from "./assets.mjs";
 import { filteredSnapshot } from "./security.mjs";
+import { sessionOf, startSession, endSession, redeem, issueTicket, ticketCount
+       , sessionProviderNames } from "./session.mjs";
 import { config, port, CONFIG_FILE, writeEnabledPlugins } from "./config.mjs";
 
 const here = dirname( fileURLToPath( import.meta.url ) );
@@ -25,8 +27,6 @@ const root = resolve( here, ".." );
 
 /** Connections, so an action can tell every window about a state change. */
 const clients = new Set();
-/** Per-connection session state; the only thing security is allowed to trust. */
-const sessions = new WeakMap();
 
 class Protocol extends Protocol_ {
 	constructor() {
@@ -130,7 +130,7 @@ class Protocol extends Protocol_ {
 				canvas,
 				control: msg.control,
 				input:   msg.input,
-				session: sessions.get( ws ) || {},
+				session: sessionOf( ws ),
 			} );
 			ws.send( { op: "queried", token: msg.token, ...result } );
 		} );
@@ -151,7 +151,8 @@ class Protocol extends Protocol_ {
 				document: msg.document,
 				control:  msg.control,
 				input:    msg.input,
-				session:  sessions.get( ws ) || {},
+				slot:     "string" === typeof msg.slot ? msg.slot : undefined,
+				session:  sessionOf( ws ),
 			} );
 
 			ws.send( { op: "invoked", token: msg.token,
@@ -193,7 +194,7 @@ class Protocol extends Protocol_ {
 				if( canvas ) {
 					const { parse, stringify } = await import( "../ui/core/document.js" );
 					void parse;
-					const result = filteredSnapshot( canvas, sessions.get( ws ) || {}, stringify );
+					const result = filteredSnapshot( canvas, sessionOf( ws ), stringify );
 					snapshot = result.snapshot;
 					dropped = result.dropped;
 					if( dropped.length )
@@ -219,21 +220,79 @@ class Protocol extends Protocol_ {
 		 * 'connect' is the one event handed the raw socket first: it fires with
 		 * (rawWs, WS).  Every other event -- op handlers and 'close' -- is given
 		 * the WS wrapper.  Key off the wrapper, or nothing matches: 'close'
-		 * would never remove the entry, sessions.get() in the op handlers would
+		 * would never remove the entry, sessionOf() in the op handlers would
 		 * always miss (silently falling back to no tokens), and a broadcast
 		 * would hand the raw socket an object, which it cannot encode.
 		 */
 		this.on( "connect", ( rawWs, ws ) => {
 			clients.add( ws );
-			// No authentication yet: an empty token set, which denies any
-			// action or control that declares tokens.
-			sessions.set( ws, { tokens: [] } );
+			// Anonymous until a ticket is redeemed: an empty token set, which
+			// denies any action or control that declares a requirement.
+			startSession( ws );
 			console.log( "client connected;", clients.size, "open" );
 		} );
 
 		this.on( "close", ( ws ) => {
 			clients.delete( ws );
-			sessions.delete( ws );
+			endSession( ws );
+		} );
+
+		/*
+		 * Redeem a ticket minted by whoever did the authenticating.
+		 *
+		 * This is an op rather than an action on purpose. An action gets a COPY
+		 * of the session so it could not replace it, and `invoke` only accepts a
+		 * control the loaded document wires -- but the session has to exist
+		 * before the first loadDocument, because that is what filters on it.
+		 *
+		 * The reply says only whether a session was established, never why not.
+		 * A wrong ticket, an expired one, one for a provider this deployment
+		 * does not run, and one that is simply malformed are indistinguishable
+		 * from out here, so probing tells the caller nothing it did not bring.
+		 */
+		/*
+		 * The backchannel half: whoever did the authenticating hands us the
+		 * session it wants us to hold, and gets an opaque id to give the user.
+		 *
+		 * Guarded by a shared secret from config.jsox, and DISABLED when that
+		 * is not set -- an unconfigured deployment must not be one where anyone
+		 * who can reach the port can mint themselves a session. It rides the
+		 * same socket every browser uses, so the secret is the whole of the
+		 * guard: keep it out of anything the browser is served, and do not
+		 * reuse it as anything else.
+		 */
+		this.on( "expect", ( ws, msg ) => {
+			const secret = config.expectSecret;
+			if( !secret || !msg || msg.secret !== secret ) {
+				console.log( "refused expect()"
+					+ ( secret ? " - wrong secret" : " - no expectSecret configured" ) );
+				ws.send( { op: "expected", token: msg && msg.token, ok: false } );
+				return;
+			}
+			if( !msg.session || "object" !== typeof msg.session ) {
+				ws.send( { op: "expected", token: msg.token, ok: false } );
+				return;
+			}
+			const issued = issueTicket( msg.session, msg.ttl );
+			ws.send( { op: "expected", token: msg.token, ok: true, ...issued } );
+			console.log( "issued a ticket for", msg.session.who || "(unnamed)",
+			             "-", ticketCount(), "outstanding" );
+		} );
+
+		this.on( "hello", async ( ws, msg ) => {
+			const session = await redeem( ws, msg && msg.ticket );
+			ws.send( { op: "hello", token: msg && msg.token,
+			           ok: !!session,
+			           // what the client may SAY, for its own chrome; the
+			           // client is never told what it may DO -- withheld
+			           // controls simply never arrive
+			           who: session ? ( session.who || null ) : null } );
+			if( session )
+				console.log( "session established via", session.via,
+				             session.who ? ( "for " + session.who ) : "" );
+			else if( msg && msg.ticket )
+				console.log( "ticket refused;", sessionProviderNames().length,
+				             "session provider(s) registered" );
 		} );
 	}
 }

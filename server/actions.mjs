@@ -85,7 +85,7 @@ export function invalidate( name ) {
  * @returns {Promise<{ok:boolean, error?:string, result?:any, broadcast?:object}>}
  */
 export async function invokeControl( { document: docName, control: controlId,
-                                       input, session } ) {
+                                       input, session, slot } ) {
 	const canvas = await documentFor( docName );
 	if( !canvas ) return { ok: false, error: "no such document" };
 
@@ -93,8 +93,12 @@ export async function invokeControl( { document: docName, control: controlId,
 	if( !control ) return { ok: false, error: "no such control" };
 
 	// The action and its arguments come from the document, never the client.
-	const name = control.props && control.props.action;
-	if( !name ) return { ok: false, error: "control has no action" };
+	// A control with several things to do (a table whose cells open a detail
+	// editor AND save it) names them in `actions` by SLOT; the client says
+	// which slot it pressed, and the slot still resolves here, in the document.
+	const props = control.props || {};
+	const name = slot ? ( props.actions || {} )[ slot ] : props.action;
+	if( !name ) return { ok: false, error: slot ? `control has no action in slot '${slot}'` : "control has no action" };
 
 	const def = actions.get( name );
 	if( !def ) return { ok: false, error: `no server action '${name}'` };
@@ -102,7 +106,7 @@ export async function invokeControl( { document: docName, control: controlId,
 	if( !allowed( control, def, session ) )
 		return { ok: false, error: "denied" };
 
-	const args = control.props.actionArgs || {};
+	const args = ( slot ? ( props.actionsArgs || {} )[ slot ] : props.actionArgs ) || {};
 	const clean = validate( def.input, input );
 
 	try {
