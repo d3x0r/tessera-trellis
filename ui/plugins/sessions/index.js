@@ -62,6 +62,8 @@ document.addEventListener( "tt-invoked", ( e ) => {
 	case "deleted":  text = `Deleted session #${r.id}`; break;
 	case "room":     text = r.room ? `Session #${r.id} is on the floor in ${r.room}` : `Session #${r.id} is off the floor`; break;
 	case "pattern":  text = `Game #${r.gameId} now plays "${r.pattern}"`; break;
+	case "bank":     text = `Opened "${r.name}" for session #${r.sessionId} with ${r.balance}`; break;
+	case "bankReleased": text = `Released the bank from session #${r.sessionId}`; break;
 	case "game":     text = r.changed ? `Saved game ${r.no ?? ""} ${r.name ?? "#" + r.gameId}`.trim()
 	                                  + ( r.packsAdded || r.packsRemoved ? ` (packs +${r.packsAdded} -${r.packsRemoved})` : "" )
 	                                  : `Nothing changed on game #${r.gameId}`; break;
@@ -120,6 +122,56 @@ registerCellType( "details", {
 		} );
 	},
 } );
+
+// -- the "assign" cell: open a bank of this class for the selected session ----
+//
+// Two slots on the bank classes table: "form" answers with a count-per-
+// compartment form (built by the server from the class's compartments), and
+// "assign" opens the bank with those counts.  The form is the same record
+// editor the games use; its save folds the counts into one input.
+
+registerCellType( "assign", {
+	sortKey: () => "",
+	render( td, row, col, ctx ) {
+		const btn = document.createElement( "button" );
+		btn.className = "tt-details-button";
+		btn.textContent = "Open…";
+		btn.title = "Open a bank of this class for the selected session";
+		td.appendChild( btn );
+		btn.addEventListener( "click", async ( evt ) => {
+			evt.stopPropagation();
+			if( getInput( "sessionId" ) === undefined ) { setVariable( "Session Result", "Pick a session first" ); return; }
+			btn.disabled = true;
+			try {
+				const reply = await ctx.invoke( { bankId: row.Id }, "form" );
+				if( !reply || reply.ok === false ) { setVariable( "Session Result", "Refused: " + ( reply && reply.error || "no form" ) ); return; }
+				openRecordDialog( reply.result, col, ctx, "assign" );
+			} finally { btn.disabled = false; }
+		} );
+	},
+} );
+
+/** One record form in an overlay, saving through the given slot. */
+function openRecordDialog( record, col, ctx, slot ) {
+	const overlay = document.createElement( "div" );
+	overlay.className = "tt-record-overlay";
+	const frame = document.createElement( "div" );
+	frame.className = "tt-record";
+	overlay.appendChild( frame );
+	const close = () => { document.removeEventListener( "keydown", onKey, true ); overlay.remove(); };
+	const onKey = ( e ) => { if( e.key === "Escape" ) { e.stopPropagation(); close(); } };
+	document.addEventListener( "keydown", onKey, true );
+	overlay.addEventListener( "click", ( e ) => { if( e.target === overlay ) close(); } );
+	const form = buildRecordForm( record, col, ctx, {
+		onClose: close,
+		onSaved: close,
+		saveSlot: slot,
+		saveLabel: record.saveLabel || "Open Bank",
+		alwaysSave: true,
+	} );
+	frame.appendChild( form.el );
+	document.body.appendChild( overlay );
+}
 
 // Double-clicking a row of a table that has an Edit column opens the same
 // editor the button does, on that row.
@@ -329,6 +381,62 @@ function buildRecordForm( record, col, ctx, hooks = {} ) {
 			values[ f.key ] = [ ...chosen ].join( "," );
 			wrap.append( caption, list );
 			wrap.style.gridColumn = "1 / -1";
+		} else if( f.type === "counts" ) {
+			// The cash-entry grid: one row per compartment, a count to type,
+			// unit value, what is on hand, the line total, and the totals under
+			// it -- the bank service's Enter Counts form, in the record editor.
+			const unit = f.unit || 1;
+			const dollars = ( n ) => "$" + ( n / unit ).toLocaleString( "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 } );
+			const map = ( v && "object" === typeof v ) ? { ...v } : {};
+			values[ f.key ] = map;
+			// "On hand" only means something once somebody holds cash; a bank
+			// being opened has none, so the column stays out of the way
+			const showOnHand = ( f.rows || [] ).some( r => r.onHand );
+			const table = document.createElement( "table" );
+			table.className = "tt-counts";
+			table.innerHTML = "<thead><tr><th>Compartment</th><th>Unit value</th>" + ( showOnHand ? "<th>On hand</th>" : "" ) + "<th>Count</th><th>Line total</th></tr></thead>";
+			const body = document.createElement( "tbody" );
+			const lineEls = new Map();
+			for( const r of f.rows || [] ) {
+				const tr = document.createElement( "tr" );
+				const td = ( text, cls ) => { const c = document.createElement( "td" ); c.textContent = text; if( cls ) c.className = cls; tr.appendChild( c ); return c; };
+				td( r.name, "tt-counts-name" );
+				td( dollars( r.scalar ), "tt-counts-num" );
+				if( showOnHand ) td( String( r.onHand || 0 ), "tt-counts-num" );
+				const cell = document.createElement( "td" );
+				cell.className = "tt-counts-count";
+				const box = document.createElement( "input" );
+				box.type = "number"; box.min = "0"; box.step = "1";
+				box.value = map[ r.id ] || 0;
+				box.addEventListener( "focus", () => box.select() );
+				box.addEventListener( "input", () => { map[ r.id ] = Math.max( 0, Math.round( Number( box.value ) || 0 ) ); refresh(); touch(); } );
+				cell.appendChild( box );
+				tr.appendChild( cell );
+				lineEls.set( r.id, td( dollars( 0 ), "tt-counts-num" ) );
+				body.appendChild( tr );
+			}
+			table.appendChild( body );
+			const totals = document.createElement( "div" );
+			totals.className = "tt-counts-totals";
+			const onHandUnits = ( f.rows || [] ).reduce( ( a, r ) => a + ( r.onHand || 0 ) * r.scalar, 0 );
+			const refresh = () => {
+				let entered = 0;
+				for( const r of f.rows || [] ) { const line = ( map[ r.id ] || 0 ) * r.scalar; entered += line; lineEls.get( r.id ).textContent = dollars( line ); }
+				totals.innerHTML = "";
+				const lines = showOnHand
+					? [ [ "Balance on hand", onHandUnits ], [ "Entered", entered ], [ "Resulting balance", onHandUnits + entered ] ]
+					: [ [ "Starting balance", entered ] ];
+				for( const [ label, n ] of lines ) {
+					const row = document.createElement( "div" );
+					const l = document.createElement( "span" ); l.textContent = label + ":";
+					const a = document.createElement( "span" ); a.textContent = dollars( n );
+					row.append( l, a );
+					totals.appendChild( row );
+				}
+			};
+			refresh();
+			wrap.append( caption, table, totals );
+			wrap.style.gridColumn = "1 / -1";
 		} else if( f.type === "pattern" ) {
 			const line = document.createElement( "div" );
 			line.className = "tt-record-pattern";
@@ -367,6 +475,22 @@ function buildRecordForm( record, col, ctx, hooks = {} ) {
 		grid.appendChild( wrap );
 	}
 
+	// a running total over the fields that carry a scalar (a counts form)
+	let totalEl = null;
+	if( record.total ) {
+		totalEl = document.createElement( "div" );
+		totalEl.className = "tt-record-total";
+		form.appendChild( totalEl );
+		const unit = record.total.unit || 1;
+		const show = () => {
+			let sum = 0;
+			for( const f of record.fields ) if( f.key && f.scalar ) sum += ( Number( values[ f.key ] ) || 0 ) * f.scalar;
+			totalEl.textContent = `${record.total.label || "Total"}: $${( sum / unit ).toLocaleString( "en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 } )}`;
+		};
+		show();
+		form.addEventListener( "input", show );
+	}
+
 	const status = document.createElement( "div" );
 	status.className = "tt-record-status";
 	const buttons = document.createElement( "div" );
@@ -378,13 +502,16 @@ function buildRecordForm( record, col, ctx, hooks = {} ) {
 		buttons.appendChild( b );
 		return b;
 	};
-	mk( "◀ Prev", "tt-record-nav", () => hooks.prev && hooks.prev(), !!hooks.prev );
-	mk( "Next ▶", "tt-record-nav", () => hooks.next && hooks.next(), !!hooks.next );
+	// paging buttons only where there is something to page through
+	if( hooks.prev !== undefined || hooks.next !== undefined ) {
+		mk( "◀ Prev", "tt-record-nav", () => hooks.prev && hooks.prev(), !!hooks.prev );
+		mk( "Next ▶", "tt-record-nav", () => hooks.next && hooks.next(), !!hooks.next );
+	}
 	const spacer = document.createElement( "span" );
 	spacer.style.flex = "1";
 	buttons.appendChild( spacer );
 	mk( "Close", "tt-record-cancel", () => hooks.onClose && hooks.onClose() );
-	const save = mk( "Save", "", () => api.save() );
+	const save = mk( hooks.saveLabel || "Save", "", () => api.save() );
 	form.append( status, buttons );
 
 	const api = {
@@ -393,13 +520,26 @@ function buildRecordForm( record, col, ctx, hooks = {} ) {
 		dirty: () => dirty,
 		/** resolves true when saved (or nothing to save), false when refused */
 		async save() {
-			if( !dirty ) return true;
+			if( !dirty && !hooks.alwaysSave ) return true;
 			save.disabled = true;
 			status.textContent = "Saving…";
-			// only the editable keys travel; the server keeps the ones it declares
-			const out = { gameId: record.gameId };
-			for( const f of record.fields ) if( f.key && f.key in values ) out[ f.key ] = values[ f.key ] === null ? "" : values[ f.key ];
-			const reply = await ctx.invoke( out, "save" );
+			// only the editable keys travel; the server keeps the ones it declares.
+			// record.ids are the keys of what is being edited; record.collapse
+			// folds a family of fields (sub_12, sub_13...) into one "id:value,..."
+			// input, the way a counts form travels.
+			const out = { ...( record.ids || {} ) };
+			if( record.gameId ) out.gameId = record.gameId;
+			const fold = record.collapse;
+			const folded = [];
+			for( const f of record.fields ) {
+				if( !f.key || !( f.key in values ) ) continue;
+				const v = values[ f.key ] === null ? "" : values[ f.key ];
+				if( f.type === "counts" ) out[ f.key ] = Object.entries( v || {} ).filter( ( [ , q ] ) => Number( q ) > 0 ).map( ( [ id, q ] ) => id + ":" + q ).join( "," );
+				else if( fold && f.key.startsWith( fold.prefix ) ) { if( Number( v ) ) folded.push( f.key.slice( fold.prefix.length ) + ":" + v ); }
+				else out[ f.key ] = v;
+			}
+			if( fold ) out[ fold.into ] = folded.join( "," );
+			const reply = await ctx.invoke( out, hooks.saveSlot || "save" );
 			save.disabled = false;
 			if( !reply || reply.ok === false ) { status.textContent = "Refused: " + ( reply && reply.error || "unknown" ); return false; }
 			dirty = false;

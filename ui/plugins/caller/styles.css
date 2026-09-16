@@ -1,0 +1,210 @@
+/* sideplayr caller plugin: every rule is prefixed ttc- so removing the plugin
+   leaves nothing behind.  Components fill the box the trellis gives them. */
+
+/* Anything below that sets `display` would otherwise beat the hidden
+   attribute's user-agent rule; hidden means hidden. */
+.ttc-verify[hidden], .ttc-ring-menu[hidden], .ttc-wild-overlay[hidden],
+.ttc-connection-flash[hidden], .ttc-connection-text[hidden], .ttc-login-overlay[hidden] { display: none !important; }
+
+/* -- flashboard ----------------------------------------------------------- */
+
+.ttc-board-host { display: flex; width: 100%; height: 100%; }
+
+.ttc-flashboard {
+	display: grid;
+	grid-template-rows: repeat( 5, 1fr );
+	width: 100%;
+	height: 100%;
+	gap: 1px;
+	background: #000;
+	border: 1px solid #000;
+	user-select: none;
+}
+.ttc-fb-row {
+	display: grid;
+	grid-template-columns: 1.4fr repeat( 15, 1fr );
+	gap: 1px;
+	min-height: 0;
+}
+.ttc-flashboard.no-letters .ttc-fb-row { grid-template-columns: repeat( 15, 1fr ); }
+
+.ttc-fb-letter {
+	display: flex; align-items: center; justify-content: center;
+	font: 700 clamp( 12px, 3vh, 48px ) system-ui, sans-serif;
+	color: #fff;
+}
+.ttc-fb-letter.blue   { background: linear-gradient( 150deg, #42BCF5 0%, #42BCF5 12%, #2f60c9 87%, #2f60c9 100% ); }
+.ttc-fb-letter.red    { background: linear-gradient( 176deg, #F03A4F 0%, #F03A4F 7%, #AB1A2D 89%, #AB1A2D 100% ); }
+.ttc-fb-letter.white  { background: linear-gradient( 176deg, #F0F0F0 0%, #dbdbdb 84%, #dbdbdb 100% ); color: #000; }
+.ttc-fb-letter.green  { background: linear-gradient( 153deg, #6aa43d 0%, #6aa43d 30%, #357400 100% ); }
+.ttc-fb-letter.yellow { background: linear-gradient( 153deg, #f0b824 0%, #f0b824 18%, #e19800 85%, #e19800 100% ); }
+
+.ttc-fb-tile {
+	display: flex; align-items: center; justify-content: center;
+	position: relative;
+	cursor: pointer;
+	font: 400 clamp( 10px, 2.6vh, 40px ) system-ui, sans-serif;
+	min-width: 0; min-height: 0;
+	overflow: hidden;
+}
+.ttc-fb-tile.unmarked { background: #ccdee8; color: #000; }
+.ttc-fb-tile.marked {
+	background: #7baac5; color: #fff;
+	box-shadow: inset 0 0 10px #000;
+	text-shadow: 1px 1px 2px rgb( 5, 7, 6 ), 0 0 5px lightgreen, 0 0 5px darkblue;
+}
+.ttc-fb-tile.last { background: #ffd54a; color: #000; text-shadow: none; box-shadow: inset 0 0 12px #7a5a00; }
+.ttc-fb-tile:hover { filter: brightness( 1.08 ); }
+
+/* -- ball view ------------------------------------------------------------ */
+
+.ttc-ball-host {
+	display: flex; align-items: center; justify-content: center;
+	width: 100%; height: 100%;
+	color: #9aa4c8;
+	overflow: hidden;
+}
+.ttc-ball-canvas { width: 100%; height: 100%; object-fit: contain; }
+
+/* -- ring timer ----------------------------------------------------------- */
+
+.ttc-ring-timer { position: relative; width: 100%; height: 100%; cursor: pointer; }
+.ttc-ring-timer svg { width: 100%; height: 100%; transform: rotate( -90deg ); }
+.ttc-ring-timer circle { fill: none; stroke-width: 9; stroke-linecap: butt; }
+.ttc-ring-track { stroke: rgba( 0, 0, 0, 0.45 ); }
+.ttc-ring-arc { stroke: #2fbf55; }         /* per-frame colour while counting; this is landed */
+.ttc-ring-sweep { stroke: #9dff7a; }
+.ttc-ring-text {
+	font-family: sans-serif; font-weight: bold; font-size: 34px; fill: #fff;
+	transform: rotate( 90deg ); transform-origin: 50px 50px;
+}
+.ttc-ring-timer.done .ttc-ring-text { fill: #d8ffd8; }
+.ttc-ring-menu {
+	position: absolute; left: 50%; top: 100%; transform: translateX( -50% );
+	display: flex; gap: 4px; padding: 6px;
+	background: rgba( 20, 20, 30, 0.95 ); border: 1px solid #555; border-radius: 6px;
+	z-index: 5;
+}
+.ttc-ring-menu button {
+	min-width: 2.6em; padding: 4px 6px; font: 600 14px system-ui, sans-serif;
+	background: #39394a; color: #f0f0f0; border: 1px solid #8fb4ff; border-radius: 4px; cursor: pointer;
+}
+
+/* -- pattern block ------------------------------------------------------- */
+
+.ttc-pattern { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; cursor: pointer; color: #9aa4c8; }
+.ttc-pattern canvas { width: 100%; height: 100%; object-fit: contain; }
+
+/* -- tile lists (sessions, games) ---------------------------------------- */
+
+.ttc-tiles {
+	display: grid;
+	grid-template-columns: repeat( auto-fill, minmax( 14em, 1fr ) );
+	grid-auto-rows: max-content;
+	gap: 0.6vh;
+	width: 100%; height: 100%;
+	overflow-y: auto;
+	padding: 0.5vh;
+	box-sizing: border-box;
+	color: #ccd; font: 500 1.8vh/1.2 system-ui, sans-serif;
+	align-content: start;
+}
+.ttc-tile {
+	display: flex; flex-direction: column; gap: 0.3vh;
+	padding: 1vh;
+	background: #2b2b3a; border: 2px solid #4a4a60; border-radius: 6px;
+	cursor: pointer;
+}
+.ttc-tile:hover { border-color: #8fb4ff; }
+.ttc-tile.current { outline: 3px solid #ffd27f; }
+.ttc-tile-name { font-weight: 700; font-size: 2.2vh; color: #fff; }
+.ttc-tile-type { color: #b8c0e0; }
+.ttc-tile-date { color: #9aa4c8; }
+.ttc-tile-pattern { display: block; width: 8vh; height: 8vh; }
+.ttc-tile-pattern canvas { width: 100%; height: 100%; }
+.ttc-game-tile.ready   { background: #173a20; border-color: #2fbf55; }
+.ttc-game-tile.playing { background: #4a3a10; border-color: #f0b824; }
+.ttc-game-tile.closed  { background: #3a1a1a; border-color: #b03030; }
+
+/* -- presence ------------------------------------------------------------ */
+
+.ttc-presence { display: flex; flex-direction: column; justify-content: center; width: 100%; height: 100%; overflow: hidden; color: #dfe4ff; }
+.ttc-presence-header { font: 600 1.6vh system-ui, sans-serif; color: #9aa4c8; }
+.ttc-presence-details { font: 500 2vh system-ui, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ttc-presence.shared .ttc-presence-details { color: #ffd479; }
+
+/* -- command buttons ------------------------------------------------------ */
+
+.ttc-command:disabled { opacity: 0.4; filter: grayscale( 0.7 ); cursor: default; }
+
+/* -- verify --------------------------------------------------------------- */
+
+.ttc-verify {
+	display: grid;
+	grid-template-columns: 1.2fr 1fr 1.4fr;
+	grid-template-rows: 1fr auto;
+	gap: 1vh;
+	width: 100%; height: 100%;
+	padding: 1vh; box-sizing: border-box;
+	background: rgba( 12, 14, 24, 0.94 );
+	border: 2px solid #8fb4ff; border-radius: 8px;
+	color: #eee; font: 500 1.8vh system-ui, sans-serif;
+	z-index: 3;
+}
+.ttc-verify-list { overflow-y: auto; display: flex; flex-direction: column; gap: 0.4vh; }
+.ttc-verify-row { display: flex; justify-content: space-between; padding: 0.8vh 1vh; background: #2b2b3a; border: 2px solid #4a4a60; border-radius: 6px; cursor: pointer; }
+.ttc-verify-row.selected { border-color: #ffd27f; }
+.ttc-verify-row.viewed   { background: #33334a; }
+.ttc-verify-row.verified { background: #173a20; border-color: #2fbf55; }
+.ttc-verify-row.rejected { background: #3a1a1a; border-color: #b03030; }
+.ttc-verify-name { font-weight: 700; }
+.ttc-verify-balls {
+	display: grid; grid-template-columns: repeat( 10, 1fr ); gap: 0.2vh;
+	align-content: start; overflow-y: auto;
+	padding: 0.4vh; background: rgba( 0, 0, 0, 0.25 ); border-radius: 8px;
+}
+.ttc-verify-ball {
+	aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+	background: #fff; color: #000; border: 1px solid #000; border-radius: 3px; font-weight: bold;
+}
+.ttc-verify-card { overflow: auto; display: flex; align-items: flex-start; justify-content: center; }
+.ttc-verify-actions { grid-column: 1 / -1; display: flex; gap: 1vh; justify-content: flex-end; }
+.ttc-verify-button {
+	padding: 1vh 2vh; font: 700 2vh system-ui, sans-serif; color: #fff;
+	border: 2px solid #8fb4ff; border-radius: 6px; background: #39394a; cursor: pointer;
+}
+.ttc-verify-button.accept { background: #155d2a; border-color: #7fe0a0; }
+.ttc-verify-button.reject { background: #7a2a10; border-color: #ffb080; }
+.ttc-verify-button.all    { background: #1f2f8f; }
+
+/* -- connection ----------------------------------------------------------- */
+
+.ttc-connection { display: flex; align-items: center; gap: 0.8vh; width: 100%; height: 100%; overflow: hidden; color: #9aa4c8; font: 500 1.7vh system-ui, sans-serif; }
+.ttc-connection-light { flex: 0 0 auto; width: 1.6vh; height: 1.6vh; border-radius: 50%; background: #666; box-shadow: 0 0 4px #000; }
+.ttc-connection[data-state="ready"] .ttc-connection-light { background: #2fbf55; box-shadow: 0 0 6px #2fbf55; }
+.ttc-connection[data-state="open"] .ttc-connection-light,
+.ttc-connection[data-state="connecting"] .ttc-connection-light,
+.ttc-connection[data-state="loading"] .ttc-connection-light { background: #f0b824; }
+.ttc-connection[data-state="offline"] .ttc-connection-light { background: #d03030; }
+.ttc-connection-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ttc-connection-flash { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 0.6em; border-radius: 4px; }
+.ttc-connection-flash.error { background: #7a2a10; color: #ffd0c0; }
+.ttc-connection-flash.notice { background: #1f2f8f; color: #dfe4ff; }
+
+/* -- login overlay (the proxy's /common/login form, hosted here) ---------- */
+
+.ttc-login-overlay { position: fixed; inset: 0; z-index: 1000; background: #101018; }
+
+/* -- wild settings -------------------------------------------------------- */
+
+.ttc-wild-overlay { position: fixed; inset: 0; z-index: 900; background: rgba( 0, 0, 0, 0.55 ); display: flex; align-items: center; justify-content: center; }
+.ttc-wild { display: flex; flex-direction: column; gap: 1.2vh; padding: 2vh; background: #1a1a22; border: 2px solid #8fb4ff; border-radius: 8px; color: #eee; font: 600 2vh system-ui, sans-serif; }
+.ttc-wild-row { display: flex; gap: 1vh; align-items: center; }
+.ttc-wild-label { min-width: 4em; }
+.ttc-wild-toggle, .ttc-wild-actions button {
+	padding: 1vh 1.6vh; font: inherit; color: #fff; border-radius: 6px; cursor: pointer;
+	background: #39394a; border: 2px solid #6a6a80;
+}
+.ttc-wild-toggle.on { background: #7a2a10; border-color: #ffb080; }
+.ttc-wild-actions { justify-content: flex-end; }
+.ttc-wild-note { color: #ffb080; font-weight: 400; }

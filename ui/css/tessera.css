@@ -236,6 +236,21 @@ html, body {
 .tt-record-buttons button.tt-record-cancel { background: #3a3a4a; }
 .tt-details-button { padding: 2px 9px; background: #3a3a4a; }
 .tt-record-status { margin-top: .6em; color: #ffb080; min-height: 1.2em; }
+.tt-record-total { margin-top: .8em; font-size: 1.15em; font-weight: 600; color: #b8ffb8; text-align: right; }
+
+/* The cash-entry grid inside a record form. */
+.tt-counts { border-collapse: collapse; margin: .3em 0; }
+.tt-counts th, .tt-counts td { border: 1px solid rgba(255,255,255,.25); padding: 3px 10px; }
+.tt-counts th { background: #2a2a38; font-weight: 600; }
+.tt-counts td.tt-counts-name { text-align: center; }
+.tt-counts td.tt-counts-num { text-align: right; font-variant-numeric: tabular-nums; }
+.tt-counts td.tt-counts-count { padding: 0; }
+.tt-counts td input { box-sizing: border-box; width: 100%; min-width: 6em; height: 100%; text-align: right; padding: 3px 8px;
+	background: #22222c; color: inherit; border: 0; font: inherit; color-scheme: dark; }
+.tt-counts td input:focus { outline: 2px solid #8fb4ff; outline-offset: -2px; }
+.tt-counts-totals { display: grid; grid-template-columns: max-content max-content; gap: .2em 3em; margin-top: .6em; color: #b8ffb8; }
+.tt-counts-totals span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+.tt-counts-totals div { display: contents; }
 .tt-record-buttons button.tt-record-nav { background: #2a2a38; }
 .tt-record-buttons button:disabled { opacity: .4; cursor: default; }
 
